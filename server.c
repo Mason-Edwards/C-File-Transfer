@@ -8,7 +8,7 @@
 #include <string.h>
 #include <pthread.h>
 
-#define MSGSIZE 256
+#include "socketinfo.h"
 
 void sendWelcomeMsg(int client_socket)
 {
@@ -23,8 +23,8 @@ void login(int client_socket)
 	recv(client_socket, &msg, sizeof(msg), 0);
 
 	printf("Logged in user: %s\n", msg);
-	char confirm[100];
-	snprintf(confirm, sizeof confirm, "Logged in as %s!\n1: File Transfer", msg); 
+	char confirm[MSGSIZE];
+	snprintf(confirm, sizeof confirm, "Logged in as %s!\n1: File Transfer\n2: EXIT", msg); 
 	send(client_socket, confirm, sizeof(confirm), 0);
 }
 
@@ -46,6 +46,14 @@ void *handle_connection(void *pclient_socket)
 		{
 			send(client_socket, "confirm", 8, 0);
 		}
+		else if (strcmp(msg, "2") == 0)
+		{
+			
+			send(client_socket, "EXITING", 8, 0);
+			close(client_socket);
+			break;
+		}
+
 	}
 }
 
@@ -54,15 +62,14 @@ int main ()
 	// Set up the socket
 	int server_socket;
 	server_socket= socket (AF_INET, SOCK_STREAM, 0);
-
 	struct sockaddr_in server_address;
 	server_address.sin_family= AF_INET;
-	server_address.sin_port= htons(9002);
+	server_address.sin_port= htons(PORT);
 	server_address.sin_addr.s_addr= INADDR_ANY;
 	bind(server_socket, (struct sockaddr*) &server_address, sizeof(server_address));
 	
 	// Start Listening
-	listen(server_socket,5);
+	listen(server_socket,BACKLOG);
 	printf("Waiting for connections...\n");
 			
 
@@ -80,7 +87,8 @@ int main ()
 		printf("Loop\n");
 
     	}
-
+	
+	printf("\nCLOSING SERVER");
 	close(server_socket);
 	return 0;
 }
