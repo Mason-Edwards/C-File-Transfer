@@ -12,19 +12,19 @@
 
 int main(){
 
-	// Handle Ctrl+c
+	// Handle Ctrl+c to SIG_IGN to ignore ctrl + c so it doesnt 
+	// close server too.
 	signal(SIGINT, SIG_IGN);
 
 	//create a socket
 	int network_socket;
 	network_socket = socket (AF_INET, SOCK_STREAM, 0);
 
-	// specify an address for the socket
+	// specify an address for the socket and connect to it
 	struct sockaddr_in server_address;
 	server_address.sin_family = AF_INET;
 	server_address.sin_port = htons(PORT);
 	server_address.sin_addr.s_addr= INADDR_ANY;
-
 	int connection_status = connect(network_socket, (struct sockaddr*) &server_address, sizeof(server_address));
 
 	//check for error with the connection
@@ -33,14 +33,18 @@ int main(){
 	}
 	
 	// Send connection established message to server
-	send(network_socket, "connected", 10, 0);
+	send(network_socket, "successfulConnection", 21, 0);
 
 	while(1)
 	{
 		char response[256];
 		// Recieve Server Response
 		recv(network_socket, &response, sizeof(response), 0);	
+		
+		// Check if the response is "EXITING" then we can break out of the loop to 
+		// close the socket 
 		if(strcmp(response, "EXITING") == 0) break;	
+		
 		// Print out the server response
 		printf("%s\n", response);
 
@@ -50,7 +54,7 @@ int main(){
 
 		// Send User Input
 		int bs = send(network_socket, input, sizeof(input), 0);
-		printf("loop | bytes: %d\n", bs);
+		//printf("loop | bytes: %d\n", bs);
 	}
 	
 	close(network_socket);
