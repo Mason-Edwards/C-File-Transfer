@@ -1,4 +1,7 @@
 TODO:
 
 FIX:
+    Sending around 256 bytes for displayUsers() sends menu
+    displaying users, logging out then displaying users broken
+    setting users isConnected to false not working? more testing needed
 

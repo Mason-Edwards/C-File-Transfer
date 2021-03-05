@@ -7,15 +7,28 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <pthread.h>
+#include <stdbool.h>
 
 #include "socketinfo.h"
 
 // Function declarations
 void* handle_connection(void* pclient_socket);
 void login(int client_socket);
+void displayUsers();
+
+//Structs
+
+typedef struct client {
+	int fd;
+	char name[MSGSIZE]; // could use char**?
+	bool isConnected;
+} Client;
 
 // Menu to send to user
-char menu[] = "1. File Transfer\n2. Exit\n";
+
+// Array of users connected
+Client users[MAXUSERS];
+int numUsers = 0; 
 
 int main ()
 {
@@ -38,7 +51,6 @@ int main ()
 		int client_socket;	
 		// Accept blocks if listen backlog is empty
 		client_socket=accept(server_socket,NULL,NULL);
-		
 		// Fork or create thread to handle connection.
 		pthread_t t;
 		// pthread_create passes an argument as a pointer
@@ -46,7 +58,7 @@ int main ()
 		int *pclient_socket = malloc(sizeof(int));
 		*pclient_socket = client_socket;
 		pthread_create(&t, NULL, handle_connection, pclient_socket);
-    	}
+	}
 	
 	printf("\nCLOSING SERVER");
 	close(server_socket);
@@ -68,7 +80,7 @@ void* handle_connection(void *pclient_socket)
 		// Recieve a message and store it into msg
 		char msg[MSGSIZE];	
 		recv(client_socket, &msg, sizeof(msg), 0);
-		printf("MSG: %s\n", msg);
+		//printf("MSG: %s\n", msg);
 		
 		// Check the contents of the msg
 		
@@ -83,11 +95,26 @@ void* handle_connection(void *pclient_socket)
 		{
 			send(client_socket, "confirm", 8, 0);
 		}
+		
 
-		// If the user has selected "Exit"
 		else if (strcmp(msg, "2") == 0)
 		{
+			displayUsers(client_socket);
+		}
+
+		// If the user has selected "Exit"
+		else if (strcmp(msg, "3") == 0)
+		{
 			send(client_socket, "EXITING", 8, 0);
+			for(int i = 0; i < numUsers; i++)
+			{
+				if(users[i].fd == client_socket)
+				{
+					users[i].isConnected = 0;
+					printf("User has disconnected: %s\n", users[i].name);
+					break;
+				}
+			}
 			close(client_socket);
 			break;
 		}
@@ -99,12 +126,23 @@ void login(int client_socket)
 	char userName[MSGSIZE];	
 	char loginMsg[] = "Welcome!\nPlease enter login info: ";
 	char confirm[MSGSIZE];
+	char menu[] = "1. File Transfer\n2. Display Users\n3. Exit\n";
 	
 	// Send the user the login message	
 	send(client_socket, loginMsg, sizeof(loginMsg), 0);
 	
 	// Recieve the users login name
 	recv(client_socket, &userName, sizeof(userName), 0);
+
+	// Store the clients file descriptor and name
+	// then add it to the users array
+	Client client;
+	client.fd = client_socket;
+	client.isConnected = 1;
+	strcpy(client.name, userName);
+
+	users[numUsers] = client;
+	numUsers++;	
 
 	// Print logged in user on server
 	printf("User Logged in: %s\n", userName);
@@ -113,4 +151,41 @@ void login(int client_socket)
 	
 	// Send user logged in confirmation and menu
 	send(client_socket, confirm, sizeof(confirm), 0);
+}
+
+//#void displayUsers(int client_socket)
+//#{
+//#	char msg[MSGSIZE];
+//#	char temp[50];
+//#	for (int i = 0; i < numUsers; i++)
+//#	{
+//#		//if(users[i].isConnected == 1)
+//#		//{
+//#			char* name = users[i].name;
+//#			int fd = users[i].fd;
+//#			snprintf(temp, sizeof temp, "Username: %s | FD: %d\n", name, fd);
+//#			strcat(msg, temp);
+//#		//}
+//#	}
+//#	send(client_socket, msg, sizeof msg, 0);
+//#}
+
+
+// BROKEN TO HELL AS WELL AS THE CLIENT>ISCONNECTED EVERYTRHIGN BAD
+void displayUsers(int client_socket)
+{
+	// FIX For some reason when bigmsg is 256 bytes the menu gets strcat'ed 
+	// into it. When its a different number of btyes it works?`
+	char bigmsg[300];
+	char msg[50];
+	for(int i = 0; i < numUsers; i++)
+	{
+		if(users[i].isConnected == 1)
+		{
+			snprintf(msg, sizeof msg, "Username: %s | FD: %d\n", users[i].name, users[i].fd);
+			strncat(bigmsg, msg, sizeof msg);
+		}
+	}
+	int bs = send(client_socket, bigmsg, sizeof bigmsg, 0);
+	printf("BYTES SENT: %d\n", bs );
 }

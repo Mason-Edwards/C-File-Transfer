@@ -37,7 +37,7 @@ int main(){
 
 	while(1)
 	{
-		char response[256];
+		char response[MSGSIZE];
 		// Recieve Server Response
 		recv(network_socket, &response, sizeof(response), 0);	
 		
@@ -45,9 +45,11 @@ int main(){
 		// close the socket 
 		if(strcmp(response, "EXITING") == 0) break;	
 		
-		// Print out the server response
-		printf("%s\n", response);
+		// Print out the server response and create a prompt
+		printf("%s\n> ", response);
 
+		
+		
 		// Take User input to select option
 		char input[20];
 		scanf("%s", input);
