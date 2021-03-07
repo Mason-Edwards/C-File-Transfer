@@ -1,4 +1,5 @@
 all: server client
+#CFLAGS =
 LDFLAGS = -pthread
 
 server: server.c

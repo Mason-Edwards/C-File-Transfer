@@ -4,3 +4,4 @@
 #define PORT 9002
 #define BACKLOG 50
 #define MAXUSERS 100
+#define DATASIZE 1024
