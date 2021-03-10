@@ -15,27 +15,12 @@
 #include "socketinfo.h"
 
 
-/** Returns true on success, or false if there was an error */
-bool SetSocketBlockingEnabled(int fd, bool blocking)
-{
-   if (fd < 0) return false;
-
-#ifdef _WIN32
-   unsigned long mode = blocking ? 0 : 1;
-   return (ioctlsocket(fd, FIONBIO, &mode) == 0) ? true : false;
-#else
-   int flags = fcntl(fd, F_GETFL, 0);
-   if (flags == -1) return false;
-   flags = blocking ? (flags & ~O_NONBLOCK) : (flags | O_NONBLOCK);
-   return (fcntl(fd, F_SETFL, flags) == 0) ? true : false;
-#endif
-}
-
 // Function declarations
 void* handle_connection(void* pclient_socket);
 void login(int client_socket);
 void displayUsers(int client_socket);
 void uploadFile(int client_socket);
+void downloadFile(int client_socket);
 
 //Structs
 
@@ -45,12 +30,20 @@ typedef struct client {
 	bool isConnected;
 } Client;
 
+typedef struct file {
+	char* filename;
+	char* owner; 
+	char* shared[MAXUSERS];
+} File;
+
 // Menu to send to user
 
 // Array of users connected
 Client users[MAXUSERS] = {0};
+File files[100] = {0};
 int numUsers = 0; 
-const char menu[] = "1. Upload File\n2. Display Users\n3. Exit\n";
+int numFiles = 0;
+const char menu[] = "1. Upload File\n2. Download File\n3. Exit\n";
 int server_socket;
 
 int main ()
@@ -118,10 +111,10 @@ void* handle_connection(void *pclient_socket)
 			uploadFile(client_socket);
 		}
 		
-		// Display Users
+		// If the user wants to download file
 		else if (strcmp(msg, "2") == 0)
 		{
-			displayUsers(client_socket);
+			downloadFile(client_socket);
 		}
 
 		// If the user has selected "Exit"
@@ -180,8 +173,7 @@ void uploadFile(int client_socket)
 	printf("-----Uploading File-----\n");
 	
 	char* initMsg = "UPLOAD";
-	char filename[30] = {0};
-	char data[DATASIZE] = {0};
+	char filename[10] = {0};
 	int response;
 	int bs = send(client_socket, initMsg, sizeof(initMsg), 0);
 	//printf("BS: %d\n", bs);
@@ -194,6 +186,7 @@ void uploadFile(int client_socket)
 
 	if(fp == NULL) printf("ERROR OPENING FILE\n");
 
+	// Set the socket to non blocking
 	int flags = fcntl(client_socket, F_GETFL, 0);
 	if (flags == -1) printf("ERROR GETTING SOCKET FLAGS\n");
 	flags = (flags | O_NONBLOCK);
@@ -202,7 +195,7 @@ void uploadFile(int client_socket)
 
 	while(1)
 	{
-		
+		char data[DATASIZE] = {0};
 		response = recv(client_socket, data, sizeof(data), 0);
 		int errnum;
 		errnum = errno;
@@ -212,22 +205,51 @@ void uploadFile(int client_socket)
 
 		printf("res: %d\n", response);
 		
+		fprintf(fp, "%s");
 		// If no msgs are avaliable or there is an error then break
 		if(response <= 0) 
 		{
 			printf("End of Stream\n");
 			break;
 		}
+		
+		// Clean up stream
+		
+		for(int i = 0; i < sizeof(data)/sizeof(char); i++)
+		{
+			if(*(data+i) == '\0') *(data+i) = ' ';
+			data[(sizeof(data)/sizeof(char))] = '\0';
+		}
+		
+		//Write to file
+		//fprintf(fp, "%s", data);
+
+		printf("Writing data %s\n\n\n", data);
 	}
-			
-	
-	
-	
+	// Set the socket back to blocking
 	flags = (flags & ~O_NONBLOCK);
 	status = fcntl(client_socket, F_SETFL, flags);
 	if(status == -1) printf("ERROR SETTING SOCKET TO BLOCKING \n");
 
-	fprintf(fp, "%s", data);
+	// Log info 
+	File file;
+	file.filename = filename;
+
+	for(int i = 0; i < numUsers; i++)
+	{
+		if(users[i].fd == client_socket)
+			file.owner = users[i].name;
+	}
+
+	files[numFiles] = file;
+	numFiles++;
+
+	for(int i = 0; i < numFiles; i++)
+	{
+		printf("\nFile: %s\nOwner: %s\n", files[i].filename, files[i].owner, files[i].shared);
+	}
+
+	
 	printf("Done Writing\n");
 	fflush(fp);
 	fclose(fp);
@@ -236,6 +258,68 @@ void uploadFile(int client_socket)
 	printf("------------------------\n\n");
 }
 
+
+void downloadFile(int client_socket)
+{
+	printf("-----User Downloading File-----\n");
+	
+	char initMsg[] = "DOWNLOADING";
+	char* user;
+	char* avaFiles[10];
+	char temp[10] = {0};
+	char avaString[MSGSIZE] = {0};
+	int curFiles = 0;
+	send(client_socket, "DOWNLOADING", 12, 0);
+
+	// Get users name
+	for(int i = 0; i < numUsers; i++)
+	{
+		if(users[i].fd == client_socket)
+		{
+			user = users[i].name;	
+			break;		
+		}
+	}
+	
+// Get all the files that they can download
+	for(int i = 0; i < numFiles; i++)
+	{
+		//Check if theyre the owner
+		if(strcmp(files[i].owner, user) == 0)
+		{
+			*(avaFiles+curFiles) = files[i].filename; 
+			curFiles++;
+			break;
+		}
+		
+		// otherwise check if its shared with them
+		for(int j = 0; j < sizeof(files[i].shared) / sizeof(files[i].shared[j]); j++)
+		{
+			if(strcmp(files[i].shared[j], user) == 0)
+			{
+				*(avaFiles+curFiles) = files[i].filename;
+				curFiles++;
+				break;
+			}
+		}
+	}
+
+
+	
+	
+	for(int q = 0; q < curFiles; q++)
+	{
+		printf("%s\n", avaFiles[q]);
+		strcpy(temp, avaFiles[q]);
+		strcat(avaString, temp);
+	}
+
+	printf("AVASTRING  :: %s\n", avaString);
+	int bs = 0;
+	bs = send(client_socket, avaString, sizeof avaString, 0);
+	printf("BYTES SENT: %d\n", bs);
+	
+}
 
 void displayUsers(int client_socket)
 {
@@ -247,7 +331,7 @@ void displayUsers(int client_socket)
 		{
 			snprintf(msg, sizeof msg, "Username: %s | FD: %d\n", users[i].name, users[i].fd);
 			strncat(bigmsg, msg, sizeof msg);
-		}
+	    }
 	}
 	int bs = send(client_socket, bigmsg, sizeof bigmsg, 0);
 	printf("BYTES SENT: %d\n", bs );

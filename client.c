@@ -11,7 +11,8 @@
 
 #include "socketinfo.h"
 
-void  uploadFile(int network_socket);
+void uploadFile(int network_socket);
+void downloadFile(int network_socket);
 
 int main(){
 
@@ -54,6 +55,12 @@ int main(){
 			uploadFile(network_socket);
 			continue;
 		}
+
+		if(strcmp(response, "DOWNLOADING") == 0)
+		{
+			downloadFile(network_socket);
+			continue;
+		}
 		// Print out the server response and create a prompt
 		printf("%s\n> ", response);
 
@@ -76,7 +83,8 @@ void uploadFile(int network_socket)
 {
 	// User enter file name and send that to server
  	char filename[30] = {0} ;
-	
+
+
 	//Get filename, also send it to the server
 	printf("\nPlease Enter a file to upload\n> ");
 	scanf("%s", filename);
@@ -84,16 +92,16 @@ void uploadFile(int network_socket)
 
 	FILE* fp = fopen(filename, "r");
 
-	printf("Uploading...\n");
+	printf("-----Uploading-----\n");
 	
-	char data[DATASIZE] = {0};
+	char data[DATASIZE];
 	// If file opens correctly
 	if(fp != NULL)
 	{
 		// While there is data in the file, Read 1mb of data into "data" and send it
 		while(fgets(data, sizeof data, fp) != NULL)
 		{
-			//printf("SENDING 1MB\n");
+			printf("Sending %s\n\n\n", data);
 			if(send(network_socket, data, sizeof data, 0) == -1)
 			{
 				printf("ERROR SENDING FILE\n");
@@ -102,6 +110,20 @@ void uploadFile(int network_socket)
 	}
 
 	else if (fp == NULL) printf("ERROR READING FILE\n");
-
+	printf("------------------\n\n");
 	fclose(fp);
+}
+
+void downloadFile(int network_socket)
+{
+	char choices[MSGSIZE] = {0};
+	char input[30] = {0};
+
+	int bs = recv(network_socket, &choices, sizeof choices, 0);
+
+	printf("BYTES RECIEVED: %d\n", bs);
+	printf("Please Select a file from the list...\n");
+	printf("%s\n>", choices);
+	scanf("%s", input);
+
 }
