@@ -14,3 +14,7 @@ TODO:
     need to add file sharing ability to be able to test download fully&
 
     ipLOading files dpoesmt wprl ((
+
+    security, maybe xor encryption
+
+    mutex lock or semaphores for writing data
