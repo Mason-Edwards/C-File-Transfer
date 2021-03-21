@@ -94,7 +94,7 @@ void uploadFile(int network_socket)
 
 	printf("-----Uploading-----\n");
 	
-	char data[DATASIZE];
+	char data[DATASIZE] = {0};
 	// If file opens correctly
 	if(fp != NULL)
 	{
@@ -105,6 +105,11 @@ void uploadFile(int network_socket)
 			if(send(network_socket, data, sizeof data, 0) == -1)
 			{
 				printf("ERROR SENDING FILE\n");
+			}
+			// Clear data for next iteration, otherwise garbage is left
+			for(int i = 0; i < DATASIZE; i++)
+			{
+				data[i] = 0;
 			}
 		}
 	}

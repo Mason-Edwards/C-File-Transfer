@@ -195,17 +195,22 @@ void uploadFile(int client_socket)
 
 	while(1)
 	{
-		char data[DATASIZE] = {0};
+		char data[DATASIZE] = {0}; // init to 0
+		char cleanedData[DATASIZE] = {0}; 
+		int cdSize = 0;
 		response = recv(client_socket, data, sizeof(data), 0);
 		int errnum;
 		errnum = errno;
+
+		//ERROR STUFF
 		//fprintf(stderr, "Value of errno %d\n", errno);
 		//perror("Error Printed by Perror\n");
 		//fprintf(stderr, "Error Opening File %s\n", strerror(errnum));
 
+		// Print data
+		printf("Data: %s\n", data);
 		printf("res: %d\n", response);
 		
-		fprintf(fp, "%s");
 		// If no msgs are avaliable or there is an error then break
 		if(response <= 0) 
 		{
@@ -214,18 +219,27 @@ void uploadFile(int client_socket)
 		}
 		
 		// Clean up stream
-		
+		// Client sends bunch of nulls, so only write chars that arent null
+		// to cleanedData, then write that to the file
 		for(int i = 0; i < sizeof(data)/sizeof(char); i++)
 		{
-			if(*(data+i) == '\0') *(data+i) = ' ';
-			data[(sizeof(data)/sizeof(char))] = '\0';
+			// If the char is not null, add it to the array
+			if(*(data+i) != '\0')
+			{
+				cleanedData[cdSize] = *(data+i);
+				cdSize++;
+			}
+			//Add null terminator
 		}
 		
-		//Write to file
-		//fprintf(fp, "%s", data);
+		cleanedData[cdSize] = '\0';
+		
+		//Write data into file
+		fprintf(fp, "%s", cleanedData);
 
-		printf("Writing data %s\n\n\n", data);
+		printf("Writing data %s\n\n\n", cleanedData);
 	}
+
 	// Set the socket back to blocking
 	flags = (flags & ~O_NONBLOCK);
 	status = fcntl(client_socket, F_SETFL, flags);
