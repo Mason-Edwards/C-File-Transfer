@@ -1,18 +1,9 @@
 TODO: 
-    track who has uploaded what file
-        file struct
-        owner
-        filename
-        char* array of ppl its shared with
-    
-        When someone uploads a file, create the struct and put it in an array
-
-        when someone downloads a file, search the array for the file to see if they are the owner or are apart of the shared usrs
-
-    create function that changes given socket to blocking or non blocking
-    
     need to add file sharing ability to be able to test download fully&
 
     security, maybe xor encryption
 
     mutex lock or semaphores for writing data
+
+    double check that util.c fuctions are working, seems so at the moment:
+        once checked, clean project to use utils.c functions

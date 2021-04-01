@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include "socketinfo.h"
+#include "utils.h"
 
 void uploadFile(int network_socket);
 void downloadFile(int network_socket);
@@ -121,14 +122,18 @@ void uploadFile(int network_socket)
 
 void downloadFile(int network_socket)
 {
-	char choices[MSGSIZE] = {0};
+	char choices[1024] = {0};
 	char input[30] = {0};
 
-	int bs = recv(network_socket, &choices, sizeof choices, 0);
+	int bs = recv(network_socket, choices, sizeof(choices), 0);
 
 	printf("BYTES RECIEVED: %d\n", bs);
 	printf("Please Select a file from the list...\n");
 	printf("%s\n>", choices);
 	scanf("%s", input);
 
+	// Send the file the user wants to download
+	bs = send(network_socket, input, sizeof(input), 0);
+
+	downloadFileFromSocketFd(network_socket, input);
 }

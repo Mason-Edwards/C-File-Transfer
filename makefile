@@ -1,19 +1,16 @@
 #CFLAGS =
-LDFLAGS = -pthread
+LDFLAGS = -lpthread
+OBJS = utils.c
 
-#all: server client
-
-all: server.c client.c
-	cc server.c -o server $(LDFLAGS)
-	cc client.c -o client $(LDFLAGS)
+all: $(OBJS)
+	cc server.c $(OBJS) -o server $(LDFLAGS)
+	cc client.c $(OBJS) -o client $(LDFLAGS)
 	mv client test/
 
-debug:
-	cc server.c -o server -g $(LDFLAGS)
-	cc client.c -o client -g $(LDFLAGS)
+debug: $(OBJS)
+	cc server.c $(OBJS) -o server -g $(LDFLAGS)
+	cc client.c $(OBJS) -o client -g $(LDFLAGS)
 	mv client test/
-
-
 
 clean:
 	rm -f *.o server client

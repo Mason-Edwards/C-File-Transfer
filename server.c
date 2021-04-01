@@ -13,6 +13,7 @@
 #include <errno.h>
 
 #include "socketinfo.h"
+#include "utils.h"
 
 
 // Function declarations
@@ -63,7 +64,7 @@ int main ()
 	printf("Waiting for connections...\n");
 	while(1)
 	{
-		int client_socket;	
+		int client_socket;
 		// Accept blocks if listen backlog is empty
 		client_socket=accept(server_socket,NULL,NULL);
 		// Fork or create thread to handle connection.
@@ -85,7 +86,7 @@ void* handle_connection(void *pclient_socket)
 {
 	// Since pclient_socket is a void pointer we need to cast it to
 	// an int before we can dereference it.
-	int client_socket = *((int*)pclient_socket);
+	int client_socket = *( (int*)pclient_socket );
 	// Free the pointer because it isnt needed
 	free(pclient_socket);
 	
@@ -281,7 +282,9 @@ void downloadFile(int client_socket)
 	char* user;
 	char* avaFiles[10];
 	char temp[10] = {0};
-	char avaString[MSGSIZE] = {0};
+	char avaString[1024] = {0};
+	char selectedFile[30] = {0};
+	int num = 0; 
 	int curFiles = 0;
 	send(client_socket, "DOWNLOADING", 12, 0);
 
@@ -295,7 +298,7 @@ void downloadFile(int client_socket)
 		}
 	}
 	
-// Get all the files that they can download
+	// Get all the files that they can download
 	for(int i = 0; i < numFiles; i++)
 	{
 		//Check if theyre the owner
@@ -330,9 +333,13 @@ void downloadFile(int client_socket)
 
 	printf("AVASTRING  :: %s\n", avaString);
 	int bs = 0;
-	bs = send(client_socket, avaString, sizeof avaString, 0);
+	bs = send(client_socket, avaString, sizeof(avaString), 0);
 	printf("BYTES SENT: %d\n", bs);
-	
+
+	// Recieve file name from user
+	bs = recv(client_socket, selectedFile, sizeof(selectedFile), 0);
+	sendFileToSocketFd(client_socket, selectedFile);
+	printf("FILE SENT\n");
 }
 
 void displayUsers(int client_socket)
