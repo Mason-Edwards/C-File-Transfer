@@ -39,11 +39,16 @@ typedef struct file {
 
 // Array of users connected
 Client users[MAXUSERS] = {0};
+// Files Uploaded
 File files[100] = {0};
 int numUsers = 0; 
 int numFiles = 0;
 const char menu[] = "1. Upload File\n2. Download File\n3. Exit\n";
 int server_socket;
+
+// Mutex Locks
+pthread_mutex_t usersLock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t filesLock = PTHREAD_MUTEX_INITIALIZER;
 
 int main ()
 {
@@ -55,9 +60,10 @@ int main ()
 	server_address.sin_addr.s_addr= INADDR_ANY;
 	bind(server_socket, (struct sockaddr*) &server_address, sizeof(server_address));
 	
-	// Create thread of handling use input
+	// Create thread of handling user input
 	pthread_t io;
 	pthread_create(&io, NULL, io_handler, NULL);
+
 	// Start Listening
 	listen(server_socket,BACKLOG);
 
@@ -153,8 +159,11 @@ void login(int client_socket)
 	client.isConnected = 1;
 	strcpy(client.name, userName);
 
+	pthread_mutex_lock(&usersLock);
 	users[numUsers] = client;
 	numUsers++;
+	pthread_mutex_unlock(&usersLock);
+
 
 	// Print logged in user on server
 	printf("User Logged in: %s\n\n", userName);
@@ -193,8 +202,10 @@ void uploadFile(int client_socket)
 		}
 	}
 
+	pthread_mutex_lock(&filesLock);
 	memcpy(&files[numFiles], &file, sizeof(file));
 	numFiles++;
+	pthread_mutex_unlock(&filesLock);
 
 	for(int i = 0; i < numFiles; i++)
 	{
