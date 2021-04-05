@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "utils.h"
 #include "socketinfo.h"
@@ -38,39 +39,28 @@ void sendFileToSocketFd(int fd, char* filename)
 	fclose(fp);
 }
 
+
 void downloadFileFromSocketFd(int fd, char* filename)
 {
-	printf("-----DOWNLOADING FILE-----\n");
-	
-	int response;
-	char data[DATASIZE] = {0}; // init to 0
-	
-	// Get the filename
 	printf("Filename: %s\n", filename);
-	// Create the file
+	
 	FILE* fp = fopen(filename, "w");
-
 	if(fp == NULL) printf("ERROR OPENING FILE\n");
 
-	// Set fd to nonblocking
-	// Once data has been recieved 
+	// Set file descriptor to non blocking
+	setBlockingFd(0, fd);
+	// Sleep for 200ms to make sure file is being sent
+	usleep(200*1000);
 	while(1)
 	{
+		char data[DATASIZE] = {0};
 		char cleanedData[DATASIZE] = {0}; 
 		int cdSize = 0;
-		response = recv(fd, data, sizeof(data), 0);
-		setBlockingFd(0, fd);
-		int errnum;
-		errnum = errno;
 
-		//ERROR STUFF
-		//fprintf(stderr, "Value of errno %d\n", errno);
-		//perror("Error Printed by Perror\n");
-		//fprintf(stderr, "Error Opening File %s\n", strerror(errnum));
+		int response = recv(fd, data, sizeof(data), 0);
 
 		// Print data
-		printf("Data: %s\n", data);
-		printf("res: %d\n", response);
+		printf("Bytes Recieved: %d\n", response);
 		
 		// If no msgs are avaliable or there is an error then break
 		if(response <= 0) 
@@ -90,10 +80,9 @@ void downloadFileFromSocketFd(int fd, char* filename)
 				cleanedData[cdSize] = *(data+i);
 				cdSize++;
 			}
-			//Add null terminator
 		}
 
-		memset(data, 0, sizeof(data));
+		// Add null termiator to end of string 
 		cleanedData[cdSize] = '\0';
 		
 		//Write data into file
@@ -104,11 +93,8 @@ void downloadFileFromSocketFd(int fd, char* filename)
 	
 	// Set fd back to blocking 
 	setBlockingFd(1, fd);
-
-	printf("DONE WRITING");
 	fflush(fp);
 	fclose(fp);
-	printf("-----------------------");
 }
 
 void setBlockingFd(_Bool toggle, int fd)
@@ -118,16 +104,18 @@ void setBlockingFd(_Bool toggle, int fd)
 		// Set the socket to non blocking
 		int flags = fcntl(fd, F_GETFL, 0);
 		if (flags == -1) printf("ERROR GETTING SOCKET FLAGS\n");
-		flags = (flags | O_NONBLOCK);
+		flags |= O_NONBLOCK;
 		int status = fcntl(fd, F_SETFL, flags);
 		if(status == -1) printf("ERROR SETTING SOCKET TO NON BLOCKING 2\n");
+		printf("SOCKET NON BLOCK\n");
 	}
 	else 
 	{
 		int flags = fcntl(fd, F_GETFL, 0);
 		if (flags == -1) printf("ERROR GETTING SOCKET FLAGS\n");
-		flags = (flags & ~O_NONBLOCK);
+		flags &= ~O_NONBLOCK;
 		int status = fcntl(fd, F_SETFL, flags);
 		if(status == -1) printf("ERROR SETTING SOCKET TO BLOCKING \n");
+		printf("SOCKET BLOCK\n");
 	}
 }

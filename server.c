@@ -15,9 +15,9 @@
 #include "socketinfo.h"
 #include "utils.h"
 
-
 // Function declarations
 void* handle_connection(void* pclient_socket);
+void* io_handler();
 void login(int client_socket);
 void displayUsers(int client_socket);
 void uploadFile(int client_socket);
@@ -27,17 +27,15 @@ void downloadFile(int client_socket);
 
 typedef struct client {
 	int fd;
-	char name[MSGSIZE]; // could use char**?
+	char name[MSGSIZE]; 
 	bool isConnected;
 } Client;
 
 typedef struct file {
-	char* filename;
-	char* owner; 
-	char* shared[MAXUSERS];
+	char filename[FILE_NAME_SIZE];
+	char owner[30]; 
+	char* shared[MAXUSERS]; // should be 2d array instead of array of pointers, need to init memory for names
 } File;
-
-// Menu to send to user
 
 // Array of users connected
 Client users[MAXUSERS] = {0};
@@ -57,9 +55,11 @@ int main ()
 	server_address.sin_addr.s_addr= INADDR_ANY;
 	bind(server_socket, (struct sockaddr*) &server_address, sizeof(server_address));
 	
+	// Create thread of handling use input
+	pthread_t io;
+	pthread_create(&io, NULL, io_handler, NULL);
 	// Start Listening
 	listen(server_socket,BACKLOG);
-
 
 	printf("Waiting for connections...\n");
 	while(1)
@@ -78,7 +78,7 @@ int main ()
 	
 	printf("\nCLOSING SERVER");
 	close(server_socket);
-	return 0;
+	return EXIT_SUCCESS;
 }
 
 // the start routine of pthread_create has to return a void pointer
@@ -86,7 +86,7 @@ void* handle_connection(void *pclient_socket)
 {
 	// Since pclient_socket is a void pointer we need to cast it to
 	// an int before we can dereference it.
-	int client_socket = *( (int*)pclient_socket );
+	int client_socket = *((int*)pclient_socket);
 	// Free the pointer because it isnt needed
 	free(pclient_socket);
 	
@@ -95,10 +95,7 @@ void* handle_connection(void *pclient_socket)
 	{
 		// Recieve a message and store it into msg
 		char msg[MSGSIZE];	
-		recv(client_socket, &msg, sizeof(msg), 0);
-		//printf("MSG: %s\n", msg);
-		
-		// Check the contents of the msg
+		recv(client_socket, msg, sizeof(msg), 0);
 		
 		// If the user just connected for the first time
 		if(strcmp(msg, "successfulConnection") == 0)
@@ -143,12 +140,11 @@ void login(int client_socket)
 	const char loginMsg[] = "Welcome!\nPlease enter login info: ";
 	char confirm[MSGSIZE] = {0};
 	
-	
 	// Send the user the login message	
 	send(client_socket, loginMsg, sizeof(loginMsg), 0);
 	
 	// Recieve the users login name
-	recv(client_socket, &userName, sizeof(userName), 0);
+	recv(client_socket, userName, sizeof(userName), 0);
 
 	// Store the clients file descriptor and name
 	// then add it to the users array
@@ -158,7 +154,7 @@ void login(int client_socket)
 	strcpy(client.name, userName);
 
 	users[numUsers] = client;
-	numUsers++;	
+	numUsers++;
 
 	// Print logged in user on server
 	printf("User Logged in: %s\n\n", userName);
@@ -174,89 +170,30 @@ void uploadFile(int client_socket)
 	printf("-----Uploading File-----\n");
 	
 	char* initMsg = "UPLOAD";
-	char filename[10] = {0};
+	char filename[FILE_NAME_SIZE] = {0};
 	int response;
 	int bs = send(client_socket, initMsg, sizeof(initMsg), 0);
-	//printf("BS: %d\n", bs);
 	
 	// Get the filename
 	recv(client_socket, filename, sizeof filename, 0);
-	printf("Filename: %s\n", filename);
-	// Create the file
-	FILE* fp = fopen(filename, "w");
 
-	if(fp == NULL) printf("ERROR OPENING FILE\n");
-
-	// Set the socket to non blocking
-	int flags = fcntl(client_socket, F_GETFL, 0);
-	if (flags == -1) printf("ERROR GETTING SOCKET FLAGS\n");
-	flags = (flags | O_NONBLOCK);
-	int status = fcntl(client_socket, F_SETFL, flags);
-	if(status == -1) printf("ERROR SETTING SOCKET TO NON BLOCKING 2\n");
-
-	while(1)
-	{
-		char data[DATASIZE] = {0}; // init to 0
-		char cleanedData[DATASIZE] = {0}; 
-		int cdSize = 0;
-		response = recv(client_socket, data, sizeof(data), 0);
-		int errnum;
-		errnum = errno;
-
-		//ERROR STUFF
-		//fprintf(stderr, "Value of errno %d\n", errno);
-		//perror("Error Printed by Perror\n");
-		//fprintf(stderr, "Error Opening File %s\n", strerror(errnum));
-
-		// Print data
-		printf("Data: %s\n", data);
-		printf("res: %d\n", response);
-		
-		// If no msgs are avaliable or there is an error then break
-		if(response <= 0) 
-		{
-			printf("End of Stream\n");
-			break;
-		}
-		
-		// Clean up stream
-		// Client sends bunch of nulls, so only write chars that arent null
-		// to cleanedData, then write that to the file
-		for(int i = 0; i < sizeof(data)/sizeof(char); i++)
-		{
-			// If the char is not null, add it to the array
-			if(*(data+i) != '\0')
-			{
-				cleanedData[cdSize] = *(data+i);
-				cdSize++;
-			}
-			//Add null terminator
-		}
-		
-		cleanedData[cdSize] = '\0';
-		
-		//Write data into file
-		fprintf(fp, "%s", cleanedData);
-
-		printf("Writing data %s\n\n\n", cleanedData);
-	}
-
-	// Set the socket back to blocking
-	flags = (flags & ~O_NONBLOCK);
-	status = fcntl(client_socket, F_SETFL, flags);
-	if(status == -1) printf("ERROR SETTING SOCKET TO BLOCKING \n");
+	// Download the file from the socket
+	downloadFileFromSocketFd(client_socket, filename);
 
 	// Log info 
 	File file;
-	file.filename = filename;
+	strcpy(file.filename, filename);
 
 	for(int i = 0; i < numUsers; i++)
 	{
 		if(users[i].fd == client_socket)
-			file.owner = users[i].name;
+		{
+			strcpy(file.owner, users[i].name);
+			break;
+		}
 	}
 
-	files[numFiles] = file;
+	memcpy(&files[numFiles], &file, sizeof(file));
 	numFiles++;
 
 	for(int i = 0; i < numFiles; i++)
@@ -264,10 +201,6 @@ void uploadFile(int client_socket)
 		printf("\nFile: %s\nOwner: %s\n", files[i].filename, files[i].owner, files[i].shared);
 	}
 
-	
-	printf("Done Writing\n");
-	fflush(fp);
-	fclose(fp);
 	send(client_socket, "Finished Uploading!\n", 20, 0);
 
 	printf("------------------------\n\n");
@@ -277,18 +210,18 @@ void uploadFile(int client_socket)
 void downloadFile(int client_socket)
 {
 	printf("-----User Downloading File-----\n");
-	
-	char initMsg[] = "DOWNLOADING";
 	char* user;
-	char* avaFiles[10];
-	char temp[10] = {0};
-	char avaString[1024] = {0};
+	char* avaFiles[10] = {0};
+	char avaString[200] = {0};
 	char selectedFile[30] = {0};
+	char confirm[17]; 
+	char finish[] = "File Downloaded!\n";
 	int num = 0; 
 	int curFiles = 0;
+	
 	send(client_socket, "DOWNLOADING", 12, 0);
 
-	// Get users name
+	// Get users name using client_socket
 	for(int i = 0; i < numUsers; i++)
 	{
 		if(users[i].fd == client_socket)
@@ -304,7 +237,8 @@ void downloadFile(int client_socket)
 		//Check if theyre the owner
 		if(strcmp(files[i].owner, user) == 0)
 		{
-			*(avaFiles+curFiles) = files[i].filename; 
+			avaFiles[curFiles] = files[i].filename; 
+			//strcpy(avaFiles[curFiles], files[i].filename);
 			curFiles++;
 			break;
 		}
@@ -314,32 +248,33 @@ void downloadFile(int client_socket)
 		{
 			if(strcmp(files[i].shared[j], user) == 0)
 			{
-				*(avaFiles+curFiles) = files[i].filename;
+				avaFiles[curFiles] = files[i].filename;
 				curFiles++;
 				break;
 			}
 		}
 	}
 
-
-	
-	
-	for(int q = 0; q < curFiles; q++)
+	for(int i = 0; i < curFiles; i++)
 	{
-		printf("%s\n", avaFiles[q]);
-		strcpy(temp, avaFiles[q]);
-		strcat(avaString, temp);
+		printf("%s\n", avaFiles[i]);
+		strcat(avaString, avaFiles[i]);
 	}
 
 	printf("AVASTRING  :: %s\n", avaString);
-	int bs = 0;
-	bs = send(client_socket, avaString, sizeof(avaString), 0);
+	// Send the file the user is able to download
+	int bs = send(client_socket, avaString, sizeof(avaString), 0);
 	printf("BYTES SENT: %d\n", bs);
 
-	// Recieve file name from user
+	// Recieve file name from user, then send the file
 	bs = recv(client_socket, selectedFile, sizeof(selectedFile), 0);
 	sendFileToSocketFd(client_socket, selectedFile);
-	printf("FILE SENT\n");
+
+	// Once the file has been sent, wait for confirmation
+	bs = recv(client_socket, confirm, sizeof(confirm), 0);
+	
+	// Once confirmation is recieved, we can send back and client will resume from the manu
+	bs = send(client_socket, "Download Complete", 18, 0);
 }
 
 void displayUsers(int client_socket)
@@ -356,4 +291,16 @@ void displayUsers(int client_socket)
 	}
 	int bs = send(client_socket, bigmsg, sizeof bigmsg, 0);
 	printf("BYTES SENT: %d\n", bs );
+}
+
+void* io_handler()
+{
+	char input[50];
+	scanf("%s", input);
+
+	if (strcmp(input, "close") == 0)
+	{
+		close(server_socket);
+		exit(EXIT_SUCCESS);
+	}
 }

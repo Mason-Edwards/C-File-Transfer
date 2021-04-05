@@ -44,7 +44,7 @@ int main(){
 	{
 		char response[MSGSIZE] = {0};
 		// Recieve Server Response
-		recv(network_socket, &response, sizeof(response), 0);	
+		recv(network_socket, response, sizeof(response), 0);	
 		
 		// Check if the response is "EXITING" then we can break out of the loop to 
 		// close the socket 
@@ -62,11 +62,10 @@ int main(){
 			downloadFile(network_socket);
 			continue;
 		}
+		
 		// Print out the server response and create a prompt
 		printf("%s\n> ", response);
 
-		
-		
 		// Take User input to select option
 		char input[20];
 		scanf("%s", input);
@@ -122,18 +121,22 @@ void uploadFile(int network_socket)
 
 void downloadFile(int network_socket)
 {
-	char choices[1024] = {0};
+	char choices[200] = {0};
 	char input[30] = {0};
+	char confirm[] = "FILEDOWNLOADED";
 
 	int bs = recv(network_socket, choices, sizeof(choices), 0);
 
 	printf("BYTES RECIEVED: %d\n", bs);
 	printf("Please Select a file from the list...\n");
 	printf("%s\n>", choices);
+	
 	scanf("%s", input);
 
 	// Send the file the user wants to download
 	bs = send(network_socket, input, sizeof(input), 0);
 
 	downloadFileFromSocketFd(network_socket, input);
+
+	bs = send(network_socket, "DOWNLOADCOMPLETE", 17, 0);
 }
