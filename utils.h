@@ -1,3 +1,5 @@
+#pragma once 
+
 #ifndef _CW2_UTILS
 #define _CW2_UTILS
 
