@@ -3,15 +3,11 @@ TODO:
 
     security, maybe xor encryption
 
-    mutex lock or semaphores for writing data
-
     double check that util.c fuctions are working, seems so at the moment(THESE CHANGES ARE ON TEST BRANCH):
         once checked, clean project to use utils.c functions
         
     make setBlockingFd more efficient by checking if it is already in the mode specified, maybe using static variable
 
-    check if a username already exists
-    
     check if a filename already exists
 
     fix defines for array lengths

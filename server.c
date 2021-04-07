@@ -148,9 +148,20 @@ void login(int client_socket)
 	
 	// Send the user the login message	
 	send(client_socket, loginMsg, sizeof(loginMsg), 0);
-	
+
+newusername:
 	// Recieve the users login name
 	recv(client_socket, userName, sizeof(userName), 0);
+
+	// If the login name is taken, ask for new one
+	for(int i = 0; i < numUsers; i++)
+	{
+		if(strcmp(users[i].name, userName) == 0)
+		{
+			send(client_socket, "NEWUSERNAME", 12, 0);
+			goto newusername;
+		}
+	}
 
 	// Store the clients file descriptor and name
 	// then add it to the users array

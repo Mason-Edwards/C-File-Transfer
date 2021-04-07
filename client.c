@@ -43,12 +43,20 @@ int main(){
 	while(1)
 	{
 		char response[MSGSIZE] = {0};
+		char input[20];
 		// Recieve Server Response
 		recv(network_socket, response, sizeof(response), 0);	
 		
 		// Check if the response is "EXITING" then we can break out of the loop to 
 		// close the socket 
 		if(strcmp(response, "EXITING") == 0) break;
+
+		// Check if the username is taken
+		if(strcmp(response, "NEWUSERNAME") == 0) 
+		{
+			printf("Username taken, please enter a new one:\n>");
+			goto newUsername;
+		}
 
 		//Check if the respone is "FILEUPLOAD"
 		if(strcmp(response, "UPLOAD") == 0)
@@ -66,8 +74,8 @@ int main(){
 		// Print out the server response and create a prompt
 		printf("%s\n> ", response);
 
+newUsername:
 		// Take User input to select option
-		char input[20];
 		scanf("%s", input);
 
 		// Send User Input
