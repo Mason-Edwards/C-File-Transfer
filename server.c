@@ -22,6 +22,7 @@ void login(int client_socket);
 void displayUsers(int client_socket);
 void uploadFile(int client_socket);
 void downloadFile(int client_socket);
+void shareFile(int client_socket);
 
 //Structs
 
@@ -31,10 +32,15 @@ typedef struct client {
 	bool isConnected;
 } Client;
 
+typedef struct clientPerms {
+	char name[MSGSIZE];
+	char perms[5];
+} ClientPerms;
+
 typedef struct file {
 	char filename[FILE_NAME_SIZE];
 	char owner[30]; 
-	char* shared[MAXUSERS]; // should be 2d array instead of array of pointers, need to init memory for names
+	ClientPerms shared[MAXUSERS];
 } File;
 
 // Array of users connected
@@ -43,7 +49,7 @@ Client users[MAXUSERS] = {0};
 File files[100] = {0};
 int numUsers = 0; 
 int numFiles = 0;
-const char menu[] = "1. Upload File\n2. Download File\n3. Exit\n";
+const char menu[] = "1. Upload File\n2. Download File\n3. Share File\n4.Exit\n";
 int server_socket;
 
 // Mutex Locks
@@ -123,6 +129,15 @@ void* handle_connection(void *pclient_socket)
 
 		// If the user has selected "Exit"
 		else if (strcmp(msg, "3") == 0)
+		{
+			if(numFiles == 0)
+			{ 
+				send(client_socket, "No files on server...\n", 24, 0);
+			}
+			else shareFile(client_socket);
+		}
+		
+		else if (strcmp(msg, "4") == 0)
 		{
 			send(client_socket, "EXITING", 8, 0);
 			for(int i = 0; i < numUsers; i++)
@@ -268,7 +283,7 @@ void downloadFile(int client_socket)
 		// otherwise check if its shared with them
 		for(int j = 0; j < sizeof(files[i].shared) / sizeof(files[i].shared[j]); j++)
 		{
-			if(strcmp(files[i].shared[j], user) == 0)
+			if(strcmp(files[i].shared[j].name, user) == 0)
 			{
 				avaFiles[curFiles] = files[i].filename;
 				curFiles++;
@@ -297,6 +312,45 @@ void downloadFile(int client_socket)
 	
 	// Once confirmation is recieved, we can send back and client will resume from the manu
 	bs = send(client_socket, "Download Complete", 18, 0);
+}
+
+void shareFile(int client_socket)
+{
+	printf("-----User Sharing File Permissions ------\n");
+	fflush(stdout);
+	int bs;
+	char file[MSGSIZE];
+	char response[MSGSIZE];
+	char* init = "SHAREFILE";
+	
+start:
+	// Get the file the user wants to add or remove user permissions from
+	bs = send(client_socket, init, strlen(init), 0);
+
+	bs = recv(client_socket, file, sizeof(file), 0);
+	
+	// Check if the file exists
+	for(int i = 0; i < numFiles; i++)
+	{
+		
+		if(strcmp(files[i].filename, file) == 0) break;
+		
+		// If it doesnt exist restart
+		else goto start;
+	}
+
+	// Check if they are the owner
+	
+	// Get the username and file permissions they want to add from the user
+
+
+	// Check if the username exists in the shared
+
+	// If it does, update perms
+
+	// If not add new 
+
+
 }
 
 void displayUsers(int client_socket)

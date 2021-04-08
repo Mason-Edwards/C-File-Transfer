@@ -14,6 +14,7 @@
 
 void uploadFile(int network_socket);
 void downloadFile(int network_socket);
+void shareFile(int network_socket);
 
 int main(){
 
@@ -69,6 +70,11 @@ int main(){
 		{
 			downloadFile(network_socket);
 			continue;
+		}
+
+		if(strcmp(response, "SHAREFILE") == 0)
+		{
+			shareFile(network_socket);
 		}
 		
 		// Print out the server response and create a prompt
@@ -147,4 +153,23 @@ void downloadFile(int network_socket)
 	downloadFileFromSocketFd(network_socket, input);
 
 	bs = send(network_socket, "DOWNLOADCOMPLETE", 17, 0);
+}
+
+void shareFile(int network_socket)
+{
+	int bs;
+	char response[MSGSIZE] = {0};
+	char choice[MSGSIZE] = {0};
+start:
+	// print menu msg
+	printf("What file do you want to share permissions with other users\n");
+
+	scanf("%s>", choice);
+
+	bs = send(network_socket, choice, sizeof(choice), 0);
+
+	bs = recv(network_socket, response, sizeof(response), 0);
+
+
+	if(strcmp(response, "FILESHARED") == 0) goto start;
 }

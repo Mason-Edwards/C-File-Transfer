@@ -99,8 +99,12 @@ void downloadFileFromSocketFd(int fd, char* filename)
 
 void setBlockingFd(_Bool toggle, int fd)
 {
+	static _Bool cur = 1;
+	if(toggle == cur) return;
+
 	if(toggle == 0)
 	{
+		cur = 0;
 		// Set the socket to non blocking
 		int flags = fcntl(fd, F_GETFL, 0);
 		if (flags == -1) printf("ERROR GETTING SOCKET FLAGS\n");
@@ -111,6 +115,7 @@ void setBlockingFd(_Bool toggle, int fd)
 	}
 	else 
 	{
+		cur = 1;
 		int flags = fcntl(fd, F_GETFL, 0);
 		if (flags == -1) printf("ERROR GETTING SOCKET FLAGS\n");
 		flags &= ~O_NONBLOCK;
