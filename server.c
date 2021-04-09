@@ -319,20 +319,31 @@ void shareFile(int client_socket)
 	printf("-----User Sharing File Permissions ------\n");
 	fflush(stdout);
 	int bs;
+	// Rename file to response
 	char file[MSGSIZE];
-	char response[MSGSIZE];
 	char* init = "SHAREFILE";
+	char* fileNotExist = "FILENOTEXIST";
+char* notOwner ="NOTOWNER";
 	_Bool isOwner = 0;
+	_Bool isFound = 0;
 	char* username;
 
-start:
-	// Get the file the user wants to add or remove user permissions from
 	bs = send(client_socket, init, strlen(init), 0);
+start:
+	// memset response in case of goto
+	memset(file, 0, sizeof file);
 
+	// Get the file the user wants to add or remove user permissions from
 	bs = recv(client_socket, file, sizeof(file), 0);
 
+	// If the user chose to quit
+	if(file[0] == '0') 
+	{
+		printf("User Canceled file share\n---------------------\n");
+		return;
+	}
+	
 	// Get their username
-
 	for(int i = 0; i < numUsers; i++)
 	{
 		if(users[i].fd == client_socket)
@@ -348,6 +359,7 @@ start:
 		// If it does, are they the owner
 		if(strcmp(files[i].filename, file) == 0) 
 		{
+			isFound = 1;
 			if(strcmp(files[i].owner, username) == 0)
 			{
 				isOwner = 1;
@@ -356,10 +368,19 @@ start:
 		}
 	}
 
-	// Check if they are the owner
-	if(isOwner)
+	// If the file isnt found
+	if(!isFound)
 	{
-		
+		bs = send(client_socket, fileNotExist, strlen(fileNotExist), 0);
+		goto start;
+	}
+	
+	// Check if they are not the owner
+	if(!isOwner)
+	{
+		bs = send(client_socket,notOwner, strlen(notOwner), 0);
+		printf("isOwner: %d\n", bs);
+		goto start;
 	}
 	
 	// Get the username and file permissions they want to add from the user

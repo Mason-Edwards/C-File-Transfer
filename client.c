@@ -75,6 +75,7 @@ int main(){
 		if(strcmp(response, "SHAREFILE") == 0)
 		{
 			shareFile(network_socket);
+			memset(response, 0, sizeof response);
 		}
 		
 		// Print out the server response and create a prompt
@@ -159,17 +160,33 @@ void shareFile(int network_socket)
 {
 	int bs;
 	char response[MSGSIZE] = {0};
-	char choice[MSGSIZE] = {0};
+	char choice[MSGSIZE];
+
 start:
+
+	memset(choice, 0, sizeof choice);
 	// print menu msg
-	printf("What file do you want to share permissions with other users\n");
+	printf("What file do you want to share permissions with other users? (Enter 0 to exit)\n");
+	fflush(stdout);
 
 	scanf("%s>", choice);
 
+
 	bs = send(network_socket, choice, sizeof(choice), 0);
+
+	if(choice[0] == '0') return;
 
 	bs = recv(network_socket, response, sizeof(response), 0);
 
-
-	if(strcmp(response, "FILESHARED") == 0) goto start;
+	if(strcmp(response, "FILENOTEXIST") == 0)
+	{
+		printf("File does not exist on the server.\n\n");
+		goto start;
+	} 
+	
+	if(strcmp(response, "NOTOWNER") == 0)
+	{
+		printf("You are not the owner of this file, please select one you are an owner of.\n\n");
+		goto start;
+	}
 }
