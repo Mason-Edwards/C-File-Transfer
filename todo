@@ -15,3 +15,5 @@ TODO:
     check security - functions like strcpy to strncpy
 
     wait for to be fully sent before recv?
+
+    change uploadFile to not memcpy the struct. just write info directly into the array

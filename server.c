@@ -322,24 +322,45 @@ void shareFile(int client_socket)
 	char file[MSGSIZE];
 	char response[MSGSIZE];
 	char* init = "SHAREFILE";
-	
+	_Bool isOwner = 0;
+	char* username;
+
 start:
 	// Get the file the user wants to add or remove user permissions from
 	bs = send(client_socket, init, strlen(init), 0);
 
 	bs = recv(client_socket, file, sizeof(file), 0);
-	
+
+	// Get their username
+
+	for(int i = 0; i < numUsers; i++)
+	{
+		if(users[i].fd == client_socket)
+		{
+			username = users[i].name;
+		}
+	}
+
+
 	// Check if the file exists
 	for(int i = 0; i < numFiles; i++)
 	{
-		
-		if(strcmp(files[i].filename, file) == 0) break;
-		
-		// If it doesnt exist restart
-		else goto start;
+		// If it does, are they the owner
+		if(strcmp(files[i].filename, file) == 0) 
+		{
+			if(strcmp(files[i].owner, username) == 0)
+			{
+				isOwner = 1;
+			}
+			break;
+		}
 	}
 
 	// Check if they are the owner
+	if(isOwner)
+	{
+		
+	}
 	
 	// Get the username and file permissions they want to add from the user
 
