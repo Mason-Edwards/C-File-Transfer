@@ -189,4 +189,18 @@ start:
 		printf("You are not the owner of this file, please select one you are an owner of.\n\n");
 		goto start;
 	}
+
+	printf("What is the user you want to share the file with?\n");
+	fflush(stdout);
+	scanf("%s>", choice);
+
+	// If stuff starts going weird then memset choice
+	send(network_socket, choice, sizeof choice, 0);
+
+	printf("\nWhat is the permissions you want the user to have?\n1. Read\n2. Read and Write\n\n>");
+
+	fflush(stdout);
+	scanf("%s>", choice);
+	
+	send(network_socket, choice, sizeof choice, 0);
 }

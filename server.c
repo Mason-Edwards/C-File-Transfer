@@ -40,6 +40,7 @@ typedef struct clientPerms {
 typedef struct file {
 	char filename[FILE_NAME_SIZE];
 	char owner[30]; 
+	int numShared;
 	ClientPerms shared[MAXUSERS];
 } File;
 
@@ -316,21 +317,24 @@ void downloadFile(int client_socket)
 
 void shareFile(int client_socket)
 {
-	printf("-----User Sharing File Permissions ------\n");
-	fflush(stdout);
 	int bs;
-	// Rename file to response
 	char file[MSGSIZE];
+	char selUser[MSGSIZE];
+	char perms[5];
 	char* init = "SHAREFILE";
 	char* fileNotExist = "FILENOTEXIST";
-char* notOwner ="NOTOWNER";
+	char* notOwner ="NOTOWNER";
 	_Bool isOwner = 0;
 	_Bool isFound = 0;
 	char* username;
+	int idx;
+	
+	printf("-----User Sharing File Permissions ------\n");
+	fflush(stdout);
 
 	bs = send(client_socket, init, strlen(init), 0);
 start:
-	// memset response in case of goto
+	// memset file in case of goto
 	memset(file, 0, sizeof file);
 
 	// Get the file the user wants to add or remove user permissions from
@@ -360,6 +364,7 @@ start:
 		if(strcmp(files[i].filename, file) == 0) 
 		{
 			isFound = 1;
+			idx = i;
 			if(strcmp(files[i].owner, username) == 0)
 			{
 				isOwner = 1;
@@ -382,17 +387,38 @@ start:
 		printf("isOwner: %d\n", bs);
 		goto start;
 	}
+
+	// Satisfy Client recv, msg not important
+	bs = send(client_socket, "FILEOK", 7, 0);
 	
 	// Get the username and file permissions they want to add from the user
-
-
+	bs = recv(client_socket, selUser, sizeof selUser, 0);
+	bs = recv(client_socket, perms, sizeof perms, 0);
+	
 	// Check if the username exists in the shared
-
-	// If it does, update perms
+	// TODO Check if its possible to reference struct that hasnt been created
+	for(int i = 0; i < MAXUSERS; i++)
+	{
+		if(strcmp(files[idx].shared[i].name, selUser) == 0)
+		{
+			// User already exists in shared so update perms
+			strcpy(files[idx].shared[i].perms, perms);
+			printf("Updated %s permissions to \"%s\"\n----------------------------------------\n", 
+				files[idx].shared[i].perms,
+				files[idx].shared[i].name);
+			return;
+		}
+	}
 
 	// If not add new 
+	strncpy(files[idx].shared[files[idx].numShared].name, selUser, sizeof(files[idx].shared[files[idx].numShared].name));
+	strncpy(files[idx].shared[files[idx].numShared].perms, perms, sizeof(files[idx].shared[files[idx].numShared].perms));
+	printf("Added %s permissions to \"%s\"\n----------------------------------------\n", 
+		files[idx].shared[files[idx].numShared].perms,
+		files[idx].shared[files[idx].numShared].name);
 
-
+	files[idx].numShared++;
+	fflush(stdout);
 }
 
 void displayUsers(int client_socket)
