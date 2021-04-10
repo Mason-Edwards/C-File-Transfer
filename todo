@@ -1,12 +1,5 @@
 TODO: 
-    need to add file sharing ability to be able to test download fully&
-
     security, maybe xor encryption
-
-    double check that util.c fuctions are working, seems so at the moment(THESE CHANGES ARE ON TEST BRANCH):
-        once checked, clean project to use utils.c functions
-        
-    TEST//make setBlockingFd more efficient by checking if it is already in the mode specified, maybe using static variable
 
     check if a filename already exists
 
@@ -14,6 +7,8 @@ TODO:
 
     check security - functions like strcpy to strncpy
 
-    wait for to be fully sent before recv?
-
     change uploadFile to not memcpy the struct. just write info directly into the array
+
+    Change "idx" in share file to fileIdx
+
+    Sending files the user can download still a bit weird

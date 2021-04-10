@@ -248,11 +248,13 @@ void uploadFile(int client_socket)
 void downloadFile(int client_socket)
 {
 	printf("-----User Downloading File-----\n");
+	int bs;
 	char* user;
 	char* avaFiles[10] = {0};
 	char avaString[200] = {0};
 	char selectedFile[30] = {0};
 	char confirm[17]; 
+	char perms[5];
 	char finish[] = "File Downloaded!\n";
 	int num = 0; 
 	int curFiles = 0;
@@ -301,7 +303,8 @@ void downloadFile(int client_socket)
 
 	printf("AVASTRING  :: %s\n", avaString);
 	// Send the file the user is able to download
-	int bs = send(client_socket, avaString, sizeof(avaString), 0);
+	bs = send(client_socket, avaString, sizeof(avaString), 0);
+	
 	printf("BYTES SENT: %d\n", bs);
 
 	// Recieve file name from user, then send the file
@@ -311,6 +314,28 @@ void downloadFile(int client_socket)
 	// Once the file has been sent, wait for confirmation
 	bs = recv(client_socket, confirm, sizeof(confirm), 0);
 	
+	// Get the users permissions
+	for(int i = 0; i < numFiles; i++)
+	{
+		// Get the selected file
+		if(strcmp(files[i].filename, selectedFile) == 0)
+		{
+			// Loop though all the shared users
+			for(int j = 0; i < files[i].numShared; i++)
+			{
+				// If the user is found
+				if(strcmp(files[i].shared[j].name, user) == 0)
+				{
+					// Store their permissions
+					strncpy(perms, files[i].shared[j].perms, sizeof(perms));
+				}
+			}
+		}
+	}
+	// Once confirmation is recieved, send permissions
+	bs = send(client_socket, perms, sizeof perms, 0);
+
+
 	// Once confirmation is recieved, we can send back and client will resume from the manu
 	bs = send(client_socket, "Download Complete", 18, 0);
 }
@@ -411,6 +436,7 @@ start:
 	}
 
 	// If not add new 
+	// Probably Should fix this mess ))
 	strncpy(files[idx].shared[files[idx].numShared].name, selUser, sizeof(files[idx].shared[files[idx].numShared].name));
 	strncpy(files[idx].shared[files[idx].numShared].perms, perms, sizeof(files[idx].shared[files[idx].numShared].perms));
 	printf("Added %s permissions to \"%s\"\n----------------------------------------\n", 

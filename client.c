@@ -1,4 +1,5 @@
 /* Client demo */
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>
@@ -8,6 +9,7 @@
 #include <string.h>
 #include <signal.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 #include "socketinfo.h"
 #include "utils.h"
@@ -138,13 +140,17 @@ void downloadFile(int network_socket)
 {
 	char choices[200] = {0};
 	char input[30] = {0};
+	char perms[5];
 	char confirm[] = "FILEDOWNLOADED";
 
 	int bs = recv(network_socket, choices, sizeof(choices), 0);
 
 	printf("BYTES RECIEVED: %d\n", bs);
+	fflush(stdout);
 	printf("Please Select a file from the list...\n");
+	fflush(stdout);
 	printf("%s\n>", choices);
+	fflush(stdout);
 	
 	scanf("%s", input);
 
@@ -153,7 +159,26 @@ void downloadFile(int network_socket)
 
 	downloadFileFromSocketFd(network_socket, input);
 
+	// Send confimation
 	bs = send(network_socket, "DOWNLOADCOMPLETE", 17, 0);
+
+	bs = recv(network_socket, perms, sizeof perms, 0);
+
+	/* Note: only need to check for read perms since they can edit the file
+			 however they like by default
+	*/
+
+	// Read Only Perms
+	if(perms[0] == '1')
+	{
+		// Set file to readonly for everyone
+		// Read permissions owner: S_IRUSR
+		// Read permissions group: S_IRGRP
+		// Read permissions others: S_IROTH
+		chmod(input, S_IRUSR | S_IRGRP | S_IROTH);
+	}
+
+	bs = send(network_socket, "FINALLYDONE", 12, 0);
 }
 
 void shareFile(int network_socket)

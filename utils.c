@@ -58,9 +58,6 @@ void downloadFileFromSocketFd(int fd, char* filename)
 		int cdSize = 0;
 
 		int response = recv(fd, data, sizeof(data), 0);
-
-		// Print data
-		printf("Bytes Recieved: %d\n", response);
 		
 		// If no msgs are avaliable or there is an error then break
 		if(response <= 0) 
@@ -75,20 +72,24 @@ void downloadFileFromSocketFd(int fd, char* filename)
 		for(int i = 0; i < sizeof(data)/sizeof(char); i++)
 		{
 			// If the char is not null, add it to the array
-			if(*(data+i) != '\0')
+			if(data[i] != '\0')
 			{
-				cleanedData[cdSize] = *(data+i);
+				cleanedData[cdSize] = data[i];
 				cdSize++;
 			}
 		}
-
+		
 		// Add null termiator to end of string 
 		cleanedData[cdSize] = '\0';
-		
+	
+		// Print Bytes Recieved and the cleaned data
+		printf("Bytes Recieved: %d\n", response);
+		printf("DATA: %s\n\n\n", cleanedData);
+		fflush(stdout);
+
 		//Write data into file
 		fprintf(fp, "%s", cleanedData);
-
-		printf("Writing data %s\n\n\n", cleanedData);
+		fflush(fp);
 	}
 	
 	// Set fd back to blocking 
