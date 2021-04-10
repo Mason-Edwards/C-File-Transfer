@@ -209,10 +209,25 @@ void uploadFile(int client_socket)
 	char filename[FILE_NAME_SIZE] = {0};
 	int response;
 	int bs = send(client_socket, initMsg, sizeof(initMsg), 0);
-	
+start:
 	// Get the filename
 	recv(client_socket, filename, sizeof filename, 0);
+	
+	// Check if the file already exists
+	if(fopen(filename, "r") != NULL)
+	{
+		send(client_socket, "FILEEXISTS", 11, 0);
+		memset(filename, 0, sizeof filename);
+		goto start;
+	}
 
+	// After first goto it doesnt block on recv, so if the name is null then goto start again
+	// and then in should block
+	if(filename[0] == '\0') goto start;
+	
+	// Satisfy client recv
+	send(client_socket, " ", 2, 0);
+	
 	// Download the file from the socket
 	downloadFileFromSocketFd(client_socket, filename);
 

@@ -100,12 +100,25 @@ void uploadFile(int network_socket)
 {
 	// User enter file name and send that to server
  	char filename[30] = {0} ;
+	char response[MSGSIZE];
 
-
+start:
 	//Get filename, also send it to the server
 	printf("\nPlease Enter a file to upload\n> ");
 	scanf("%s", filename);
 	send(network_socket, filename, sizeof filename, 0);
+
+	recv(network_socket, response, sizeof response, 0);
+	
+	if(strcmp(response, "FILEEXISTS") == 0)
+	{
+		memset(filename, 0, sizeof(filename));
+		memset(response, 0, sizeof(response));
+		printf("This file already exists on the server.\nPlease change the filename and reupload.\n\n");
+		fflush(stdout);
+		goto start;
+	}
+
 
 	FILE* fp = fopen(filename, "r");
 
