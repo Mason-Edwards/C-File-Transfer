@@ -119,36 +119,8 @@ start:
 		goto start;
 	}
 
-
-	FILE* fp = fopen(filename, "r");
-
-	printf("-----Uploading-----\n");
-	
-	char data[DATASIZE] = {0};
-	// If file opens correctly
-	if(fp != NULL)
-	{
-		// While there is data in the file, Read 1mb of data into "data" and send it
-		while(fgets(data, sizeof data, fp) != NULL)
-		{
-			printf("Sending %s\n\n\n", data);
-			if(send(network_socket, data, sizeof data, 0) == -1)
-			{
-				printf("ERROR SENDING FILE\n");
-			}
-			// Clear data for next iteration, otherwise garbage is left
-			for(int i = 0; i < DATASIZE; i++)
-			{
-				data[i] = 0;
-			}
-		}
-	}
-
-	else if (fp == NULL) printf("ERROR READING FILE\n");
-	printf("------------------\n\n");
-	fclose(fp);
+	sendEncryFileToSocketFd(network_socket, filename);
 }
-
 void downloadFile(int network_socket)
 {
 	char choices[200] = {0};
@@ -170,7 +142,7 @@ void downloadFile(int network_socket)
 	// Send the file the user wants to download
 	bs = send(network_socket, input, sizeof(input), 0);
 
-	downloadFileFromSocketFd(network_socket, input);
+	downloadEncryFileFromSocketFd(network_socket, input);
 
 	// Send confimation
 	bs = send(network_socket, "DOWNLOADCOMPLETE", 17, 0);

@@ -322,6 +322,9 @@ void downloadFile(int client_socket)
 	
 	printf("BYTES SENT: %d\n", bs);
 
+	
+	printf("BYTES SENT: %d\n", bs);
+
 	// Recieve file name from user, then send the file
 	bs = recv(client_socket, selectedFile, sizeof(selectedFile), 0);
 	sendFileToSocketFd(client_socket, selectedFile);
