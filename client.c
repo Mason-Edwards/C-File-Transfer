@@ -61,7 +61,7 @@ int main(){
 			goto newUsername;
 		}
 
-		//Check if the respone is "FILEUPLOAD"
+		//Check if the respone is "UPLOAD"
 		if(strcmp(response, "UPLOAD") == 0)
 		{
 			uploadFile(network_socket);
