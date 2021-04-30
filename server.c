@@ -128,7 +128,7 @@ void* handle_connection(void *pclient_socket)
 			downloadFile(client_socket);
 		}
 
-		// If the user has selected "Exit"
+		// If the user wants to share a file
 		else if (strcmp(msg, "3") == 0)
 		{
 			if(numFiles == 0)
@@ -137,7 +137,7 @@ void* handle_connection(void *pclient_socket)
 			}
 			else shareFile(client_socket);
 		}
-		
+		// If the user has selected "Exit"
 		else if (strcmp(msg, "4") == 0)
 		{
 			send(client_socket, "EXITING", 8, 0);
