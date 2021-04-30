@@ -453,8 +453,8 @@ start:
 		}
 	}
 
-	// If not add new 
-	// Probably Should fix this mess ))
+	// If not add new permissions
+	// Probably should clean up this mess with variables but it works...
 	strncpy(files[idx].shared[files[idx].numShared].name, selUser, sizeof(files[idx].shared[files[idx].numShared].name));
 	strncpy(files[idx].shared[files[idx].numShared].perms, perms, sizeof(files[idx].shared[files[idx].numShared].perms));
 	printf("Added %s permissions to \"%s\"\n----------------------------------------\n", 
